@@ -1,0 +1,96 @@
+// ==UserScript==
+// @name         WhatsApp Group Contacts Downloader
+// @namespace    http://tampermonkey.net/
+// @version      1.4
+// @description  Downloads WhatsApp group contacts as CSV using group name + date as filename. Adds button beside search icon on WhatsApp Web.
+// @author       You
+// @match        https://web.whatsapp.com/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    const interval = setInterval(() => {
+        const searchIcon = document.querySelector('span[data-icon="search-alt"]');
+        const menuIcon = document.querySelector('span[data-icon="menu"]');
+
+        if (!searchIcon || !menuIcon) return;
+
+        if (document.getElementById("downloadNumbersBtn")) {
+            clearInterval(interval);
+            return;
+        }
+
+        const downloadBtn = document.createElement("span");
+        downloadBtn.id = "downloadNumbersBtn";
+        downloadBtn.textContent = "⬇️";
+        downloadBtn.title = "Download phone numbers";
+        downloadBtn.style.cursor = "pointer";
+        downloadBtn.style.fontSize = "20px";
+        downloadBtn.style.margin = "0 8px";
+        downloadBtn.style.color = "red";
+
+        const parentRow = searchIcon.closest("div[role='button']")?.parentElement;
+        if (parentRow) {
+            parentRow.insertBefore(downloadBtn, searchIcon.closest("div[role='button']"));
+        } else {
+            menuIcon.parentElement.appendChild(downloadBtn);
+        }
+
+        const getPhoneNumbers = () => {
+            const spans = document.querySelectorAll('span[title*="+"]');
+            let fullText = "";
+            spans.forEach(span => {
+                fullText += span.getAttribute("title") + " ";
+            });
+
+            const matches = fullText.match(/\+[\d\s]{8,}/g) || [];
+            const cleaned = matches.map(num => num.replace(/\s+/g, ''));
+            return Array.from(new Set(cleaned));
+        };
+
+        const getGroupName = () => {
+            const header = document.querySelector("header");
+            if (!header) return "whatsapp_group";
+
+            // Grab first visible span with dir="auto" (usually the group name)
+            const spans = header.querySelectorAll('span[dir="auto"]');
+            for (let span of spans) {
+                const name = span.textContent?.trim();
+                if (name && name.length > 0) {
+                    return name.replace(/[\\/:*?"<>|]/g, ""); // Clean filename
+                }
+            }
+
+            return "whatsapp_group";
+        };
+
+        const updateColor = () => {
+            const nums = getPhoneNumbers();
+            downloadBtn.style.color = nums.length ? "green" : "red";
+        };
+        const colorInterval = setInterval(updateColor, 1500);
+        updateColor();
+
+        downloadBtn.addEventListener("click", () => {
+            const numbers = getPhoneNumbers();
+            if (!numbers.length) {
+                alert("No phone numbers found. Make sure participant list is visible.");
+                return;
+            }
+
+            const groupName = getGroupName();
+            const today = new Date().toISOString().split("T")[0];
+            const filename = `${groupName} - ${today}.csv`;
+
+            const csv = "data:text/csv;charset=utf-8," + numbers.join("\n");
+            const link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csv));
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        clearInterval(interval);
+    }, 1000);
+})();
