@@ -1,0 +1,35 @@
+// ==UserScript==
+// @name         Full scren Whatsapp
+// @namespace    http://tampermonkey.net/
+// @version      1.2
+// @description  Set specific styles dynamically on a targeted element
+// @author       YourName
+// @match        *://*/*
+// @grant        none
+// @run-at       document-idle
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    function applyStyles() {
+        let style = document.createElement('style');
+        style.innerHTML = `
+            div[class*="_aigs"] {
+                width: calc(100% - 0px) !important;
+                top: 2px !important;
+            }
+            .x5yr21d {
+                height: 99.90% !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Apply styles on page load
+    window.addEventListener('load', applyStyles);
+    setTimeout(applyStyles, 3000);
+
+    // Monitor for changes and reapply styles if needed
+    new MutationObserver(applyStyles).observe(document.body, { childList: true, subtree: true });
+})();
