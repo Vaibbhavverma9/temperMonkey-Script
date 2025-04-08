@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         WhatsApp Group Contacts Downloader
+// @name         WhatsApp Group Contacts Downloader (with Group Name)
 // @namespace    http://tampermonkey.net/
 // @version      1.4
 // @description  Downloads WhatsApp group contacts as CSV using group name + date as filename. Adds button beside search icon on WhatsApp Web.
@@ -29,7 +29,7 @@
         downloadBtn.style.margin = "0 8px";
         downloadBtn.style.color = "red";
 
-        const parentRow = searchIcon.closest("div[role='button']")?.parentElement;
+        const parentRow = searchIcon.closest("button[role='button']")?.parentElement.parentElement;
         if (parentRow) {
             parentRow.insertBefore(downloadBtn, searchIcon.closest("div[role='button']"));
         } else {
