@@ -1,40 +1,21 @@
 // ==UserScript==
-// @name         WhatsApp Group Contacts Downloader (with Group Name)
+// @name         WhatsApp Group Contacts Downloader + Copier
 // @namespace    http://tampermonkey.net/
-// @version      1.4
-// @description  Downloads WhatsApp group contacts as CSV using group name + date as filename. Adds button beside search icon on WhatsApp Web.
+// @version      1.5
+// @description  Downloads or copies WhatsApp group contacts using group name + date as filename. Adds buttons beside search icon on WhatsApp Web.
 // @author       You
 // @match        https://web.whatsapp.com/*
 // @grant        none
 // ==/UserScript==
 
 (function () {
-    const interval = setInterval(() => {
+    const injectButtons = () => {
         const searchIcon = document.querySelector('span[data-icon="search-alt"]');
         const menuIcon = document.querySelector('span[data-icon="menu"]');
 
         if (!searchIcon || !menuIcon) return;
 
-        if (document.getElementById("downloadNumbersBtn")) {
-            clearInterval(interval);
-            return;
-        }
-
-        const downloadBtn = document.createElement("span");
-        downloadBtn.id = "downloadNumbersBtn";
-        downloadBtn.textContent = "⬇️";
-        downloadBtn.title = "Download phone numbers";
-        downloadBtn.style.cursor = "pointer";
-        downloadBtn.style.fontSize = "20px";
-        downloadBtn.style.margin = "0 8px";
-        downloadBtn.style.color = "red";
-
-        const parentRow = searchIcon.closest("button[role='button']")?.parentElement.parentElement;
-        if (parentRow) {
-            parentRow.insertBefore(downloadBtn, searchIcon.closest("div[role='button']"));
-        } else {
-            menuIcon.parentElement.appendChild(downloadBtn);
-        }
+        if (document.getElementById("downloadNumbersBtn") || document.getElementById("copyNumbersBtn")) return;
 
         const getPhoneNumbers = () => {
             const spans = document.querySelectorAll('span[title*="+"]');
@@ -52,24 +33,33 @@
             const header = document.querySelector("header");
             if (!header) return "whatsapp_group";
 
-            // Grab first visible span with dir="auto" (usually the group name)
             const spans = header.querySelectorAll('span[dir="auto"]');
             for (let span of spans) {
                 const name = span.textContent?.trim();
                 if (name && name.length > 0) {
-                    return name.replace(/[\\/:*?"<>|]/g, ""); // Clean filename
+                    return name.replace(/[\\/:*?"<>|]/g, "");
                 }
             }
 
             return "whatsapp_group";
         };
 
-        const updateColor = () => {
-            const nums = getPhoneNumbers();
-            downloadBtn.style.color = nums.length ? "green" : "red";
-        };
-        const colorInterval = setInterval(updateColor, 1500);
-        updateColor();
+        const parentRow = searchIcon.closest("button[role='button']")?.parentElement.parentElement;
+        const container = parentRow || menuIcon.parentElement;
+
+        const downloadBtn = document.createElement("span");
+        downloadBtn.id = "downloadNumbersBtn";
+        downloadBtn.textContent = "⬇️";
+        downloadBtn.title = "Download phone numbers";
+        downloadBtn.style.cssText = "cursor:pointer;font-size:20px;margin:0 8px;color:red;";
+        container.insertBefore(downloadBtn, searchIcon.closest("div[role='button']"));
+
+        const copyBtn = document.createElement("span");
+        copyBtn.id = "copyNumbersBtn";
+        copyBtn.textContent = "📋";
+        copyBtn.title = "Copy phone numbers to clipboard";
+        copyBtn.style.cssText = "cursor:pointer;font-size:20px;margin:0 8px;color:orange;";
+        container.insertBefore(copyBtn, downloadBtn.nextSibling);
 
         downloadBtn.addEventListener("click", () => {
             const numbers = getPhoneNumbers();
@@ -91,6 +81,44 @@
             document.body.removeChild(link);
         });
 
-        clearInterval(interval);
-    }, 1000);
+        copyBtn.addEventListener("click", () => {
+            const numbers = getPhoneNumbers();
+            if (!numbers.length) {
+                alert("No phone numbers found. Make sure participant list is visible.");
+                return;
+            }
+
+            const textToCopy = numbers.join("\n");
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const tempNote = document.createElement("div");
+                tempNote.textContent = "📋 Phone numbers copied!";
+                tempNote.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background-color: #4caf50;
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 10px;
+                    z-index: 9999;
+                `;
+                document.body.appendChild(tempNote);
+                setTimeout(() => tempNote.remove(), 3000);
+            });
+        });
+    };
+
+    // Observe DOM changes
+    const observer = new MutationObserver(() => {
+        injectButtons();
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Also try injecting immediately in case it's already loaded
+    injectButtons();
 })();
