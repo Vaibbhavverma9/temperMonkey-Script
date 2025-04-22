@@ -1,0 +1,69 @@
+// ==UserScript==
+// @name         WhatsApp‑Web Auto Add Signature
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Insert a 3‑line signature block with two blank lines in WhatsApp Web’s message box—each on its own line.
+// @match        https://web.whatsapp.com/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+  'use strict';
+
+  // ─────────── YOUR SIGNATURE LINES ───────────
+  const signatureLines = [
+    "> Message from John",
+//more signature lines can be added here if required
+  ];
+  // ─────────────────────────────────────────────
+
+  // This selector matches only the chat input, not the search bar
+  const inputSelector = 'div[contenteditable="true"][aria-label="Type a message"]';
+
+  function insertSignatureOnce(input) {
+    // only when empty & not already inserted
+    if (input.dataset.sigInserted || input.innerText.trim() !== "") return;
+
+    input.focus();
+
+    // For each line: insertText + line break
+    signatureLines.forEach(line => {
+      document.execCommand('insertText', false, line);
+      // simulate Shift+Enter (creates a <br>)
+      input.dispatchEvent(new InputEvent('beforeinput', {
+        inputType: 'insertLineBreak',
+        bubbles: true,
+        cancelable: true
+      }));
+    });
+
+    // Two more breaks for two blank lines (enable if want by removing back slash)
+    input.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertLineBreak', bubbles: true, cancelable: true }));
+    //input.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertLineBreak', bubbles: true, cancelable: true }));
+
+    // Place cursor at the very end (below the blank lines)
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(input);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    input.dataset.sigInserted = "1";
+  }
+
+  // Trigger when the box is focused
+  document.body.addEventListener('focus', e => {
+    if (e.target.matches(inputSelector)) {
+      insertSignatureOnce(e.target);
+    }
+  }, true);
+
+  // Also cover typing before focus
+  document.body.addEventListener('keydown', e => {
+    if (e.target.matches(inputSelector) && !e.target.dataset.sigInserted) {
+      insertSignatureOnce(e.target);
+    }
+  }, true);
+
+})();
