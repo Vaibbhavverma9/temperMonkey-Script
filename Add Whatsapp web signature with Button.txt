@@ -1,0 +1,86 @@
+// ==UserScript==
+// @name         Perfect WA Signature Button (Clean UI + 2 Line Breaks)
+// @namespace    http://tampermonkey.net/
+// @version      2.4
+// @description  Insert signature with two blank lines after, clean button (no border/bg)
+// @match        https://web.whatsapp.com/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    const signatureLines = [
+        "> *Your Signatnature*"
+    ];
+
+    const inputSelector = 'div[contenteditable="true"][data-tab="10"]';
+
+    function insertSignature(input) {
+        if (!input) return;
+        input.focus();
+
+        // Clear any previous content if needed
+        signatureLines.forEach((line) => {
+            document.execCommand('insertText', false, line);
+            input.dispatchEvent(new InputEvent('beforeinput', {
+                inputType: 'insertLineBreak',
+                bubbles: true,
+                cancelable: true
+            }));
+        });
+
+        // Add two blank lines (for spacing after signature)
+        input.dispatchEvent(new InputEvent('beforeinput', {
+            inputType: 'insertLineBreak',
+            bubbles: true,
+            cancelable: true
+        }));
+
+        // Set cursor to end
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(input);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+
+    function waitForInputBoxAndInject() {
+        const inputBox = document.querySelector(inputSelector);
+        if (!inputBox) return;
+
+        const toolbarParent = inputBox.closest('[role="textbox"]')?.parentElement?.parentElement;
+        if (!toolbarParent || document.getElementById('signature-button-strip')) return;
+
+        const strip = document.createElement('div');
+        strip.id = 'signature-button-strip';
+        strip.style.display = 'flex';
+        strip.style.justifyContent = 'flex-start';
+        strip.style.gap = '8px';
+        strip.style.marginBottom = '6px';
+        strip.style.padding = '0';
+        strip.style.background = 'none';
+        strip.style.border = 'none';
+
+        const button = document.createElement('button');
+        button.innerText = '✏️';
+        button.style.padding = '2px 3px';
+        button.style.background = 'none';
+        button.style.color = 'black';
+        button.style.border = 'none';
+        button.style.borderRadius = '0';
+        button.style.cursor = 'pointer';
+        button.style.fontSize = '25px'; // 👈 controls icon size
+
+        button.addEventListener('click', () => {
+            const input = document.querySelector(inputSelector);
+            insertSignature(input);
+        });
+
+        strip.appendChild(button);
+        toolbarParent.parentElement.insertBefore(strip, toolbarParent);
+    }
+
+    setInterval(waitForInputBoxAndInject, 1500);
+})();
