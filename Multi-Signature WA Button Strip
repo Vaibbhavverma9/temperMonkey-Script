@@ -1,0 +1,107 @@
+// ==UserScript==
+// @name         Multi-Signature WA Button Strip
+// @namespace    http://tampermonkey.net/
+// @version      3.0
+// @description  Multiple signature buttons with clean UI for WhatsApp Web
+// @match        https://web.whatsapp.com/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    // 👇 Define your multiple signatures and their icons here
+    const signatures = [
+        {
+            icon: '👤',
+            lines: [
+                "> *Message from Jyoti*"
+            ]
+        },
+        {
+            icon: '🔥',
+            lines: [
+                "> *Powered by OccultOrbit*",
+                "> *Stay Mystical!*"
+            ]
+        },
+        {
+            icon: '✨',
+            lines: [
+                "> *Magic Happens Here*",
+                "> *Blessed Be!*"
+            ]
+        }
+    ];
+
+    const inputSelector = 'div[contenteditable="true"][data-tab="10"]';
+
+    function insertSignature(input, lines) {
+        if (!input) return;
+        input.focus();
+
+        lines.forEach((line) => {
+            document.execCommand('insertText', false, line);
+            input.dispatchEvent(new InputEvent('beforeinput', {
+                inputType: 'insertLineBreak',
+                bubbles: true,
+                cancelable: true
+            }));
+        });
+
+        // Add two blank lines after signature
+        input.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertLineBreak', bubbles: true, cancelable: true }));
+       //Enable Below to add mote blank lines
+      // input.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertLineBreak', bubbles: true, cancelable: true }));
+
+        // Move cursor to end
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(input);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+
+    function waitForInputBoxAndInject() {
+        const inputBox = document.querySelector(inputSelector);
+        if (!inputBox) return;
+
+        const toolbarParent = inputBox.closest('[role="textbox"]')?.parentElement?.parentElement;
+        if (!toolbarParent || document.getElementById('signature-button-strip')) return;
+
+        const strip = document.createElement('div');
+        strip.id = 'signature-button-strip';
+        strip.style.display = 'flex';
+        strip.style.justifyContent = 'flex-start';
+        strip.style.gap = '8px';
+        strip.style.marginBottom = '6px';
+        strip.style.padding = '0';
+        strip.style.background = 'none';
+        strip.style.border = 'none';
+
+        // Create a button for each signature
+        signatures.forEach(sig => {
+            const button = document.createElement('button');
+            button.innerText = sig.icon;
+            button.style.padding = '5px 3px';
+            button.style.background = 'none';
+            button.style.color = 'black';
+            button.style.border = 'none';
+            button.style.borderRadius = '0';
+            button.style.cursor = 'pointer';
+            button.style.fontSize = '21px';
+
+            button.addEventListener('click', () => {
+                const input = document.querySelector(inputSelector);
+                insertSignature(input, sig.lines);
+            });
+
+            strip.appendChild(button);
+        });
+
+        toolbarParent.parentElement.insertBefore(strip, toolbarParent);
+    }
+
+    setInterval(waitForInputBoxAndInject, 1500);
+})();
