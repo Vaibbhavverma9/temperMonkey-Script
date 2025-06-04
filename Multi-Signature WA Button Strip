@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Multi-Signature WA Button Strip
+// @name         Multi-Signature WA Button Strip (Fast Load)
 // @namespace    http://tampermonkey.net/
-// @version      3.0
-// @description  Multiple signature buttons with clean UI for WhatsApp Web
+// @version      3.1
+// @description  Multiple signature buttons with clean UI for WhatsApp Web (Optimized Load)
 // @match        https://web.whatsapp.com/*
 // @grant        none
 // ==/UserScript==
@@ -10,19 +10,21 @@
 (function () {
     'use strict';
 
-    // 👇 Define your multiple signatures and their icons here
     const signatures = [
         {
             icon: '👤',
             lines: [
-                "> *Message from Jyoti*"
+                "> *Message from John*"
             ]
         },
         {
-            icon: '🔥',
+            icon: '🗒️',
             lines: [
-                "> *Powered by OccultOrbit*",
-                "> *Stay Mystical!*"
+                "> *Message from Jyoti*",
+                " ",
+                "Kindly check you E-mail ID",
+                "Our system has sent you the PDF report",
+                "from E-mail: demo@demo.com"
             ]
         },
         {
@@ -49,12 +51,8 @@
             }));
         });
 
-        // Add two blank lines after signature
         input.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertLineBreak', bubbles: true, cancelable: true }));
-       //Enable Below to add mote blank lines
-      // input.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertLineBreak', bubbles: true, cancelable: true }));
 
-        // Move cursor to end
         const sel = window.getSelection();
         const range = document.createRange();
         range.selectNodeContents(input);
@@ -63,7 +61,7 @@
         sel.addRange(range);
     }
 
-    function waitForInputBoxAndInject() {
+    function injectButtons() {
         const inputBox = document.querySelector(inputSelector);
         if (!inputBox) return;
 
@@ -80,7 +78,6 @@
         strip.style.background = 'none';
         strip.style.border = 'none';
 
-        // Create a button for each signature
         signatures.forEach(sig => {
             const button = document.createElement('button');
             button.innerText = sig.icon;
@@ -103,5 +100,11 @@
         toolbarParent.parentElement.insertBefore(strip, toolbarParent);
     }
 
-    setInterval(waitForInputBoxAndInject, 1500);
+    // MutationObserver to watch for input box load
+    const observer = new MutationObserver(() => {
+        injectButtons();
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
 })();
